@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 from multiprocessing import Pool
 from scipy.interpolate import CubicSpline
-from scipy.integrate import trapz
+from scipy.integrate import trapezoid
 import numpy as np
 import time
 import os
