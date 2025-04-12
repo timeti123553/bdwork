@@ -1,10 +1,6 @@
-# vaspvis
+# bdwork
 
-A highly flexible and customizable library for visualizing electronic structure data from VASP calculations.
-
-Find the full documentation [here](https://vaspvis.readthedocs.io/en/latest/modules.html) or by clicking the docs icon below.
-
-[![Documentation Status](https://readthedocs.org/projects/vaspvis/badge/?version=latest)](https://vaspvis.readthedocs.io/en/latest/?badge=latest)
+bdwork 是一个在 vaspvis 基础上修改和扩展的 Python 包，未来将进一步优化程序的运行效率。
 
 # Usage
 
