@@ -10,7 +10,7 @@ import numpy as np
 from scipy.ndimage import gaussian_filter
 import matplotlib.patheffects as pa
 import copy as copy
-from vaspvis.utils import make_supercell, group_layers
+from bdwork.utils import make_supercell, group_layers
 from ase.data.colors import jmol_colors
 from sklearn.neighbors import radius_neighbors_graph
 import os

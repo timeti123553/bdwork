@@ -1,6 +1,6 @@
-from vaspvis.unfold import make_kpath,removeDuplicateKpoints, find_K_from_k, save2VaspKPOINTS
-from vaspvis.unfold import convert
-from vaspvis.passivator_utils import _append_H, _cart2sph, _get_bot_index, _get_neighbors, _get_top_index,_sort_by_z, _sph2cart, _center_slab
+from bdwork.unfold import make_kpath,removeDuplicateKpoints, find_K_from_k, save2VaspKPOINTS
+from bdwork.unfold import convert
+from bdwork.passivator_utils import _append_H, _cart2sph, _get_bot_index, _get_neighbors, _get_top_index,_sort_by_z, _sph2cart, _center_slab
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN, CrystalNN, EconNN
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
@@ -936,8 +936,8 @@ def compare_dos_to_bulk(
     fill_slab=True,
     figsize=(4,3),
 ):
-    from vaspvis.dos import Dos
-    from vaspvis.standard import _figure_setup_dos
+    from bdwork.dos import Dos
+    from bdwork.standard import _figure_setup_dos
     fig, ax = plt.subplots(figsize=figsize, dpi=300)
     _figure_setup_dos(ax=ax, fontsize=12, energyaxis='x')
 

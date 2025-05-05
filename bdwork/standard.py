@@ -4,9 +4,9 @@ such as band structures and density of states put together, and spin
 projected plots. 
 """
 
-from vaspvis.band import Band
-from vaspvis.dos import Dos
-from vaspvis.utils import BandGap
+from bdwork.band import Band
+from bdwork.dos import Dos
+from bdwork.utils import BandGap
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from matplotlib.colors import Normalize, to_rgba, LinearSegmentedColormap

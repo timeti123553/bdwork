@@ -1016,7 +1016,7 @@ class Dos:
                         ax.set_ylim(np.min(density_in_plot) * 1.1, 0)
 
     def _sum_layers(self, layers, atol=None, custom_layer_inds=None):
-        from vaspvis.utils import group_layers
+        from bdwork.utils import group_layers
 
         if custom_layer_inds is None:
             groups, _ = group_layers(self.poscar.structure, atol=atol)
@@ -2212,7 +2212,7 @@ class Dos:
                 atomic indices in each layers of the material.
             custom_cbar_label (str or None): Custom label for the colorbar
         """
-        from vaspvis.utils import group_layers
+        from bdwork.utils import group_layers
         import matplotlib.colors as colors
 
         energy = self.tdos_array[:, 0]

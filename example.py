@@ -1,4 +1,4 @@
-from vaspvis import standard
+from bdwork import standard
 
 
 band_folder = '../vaspvis_data/band_InAs'
