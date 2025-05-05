@@ -34,27 +34,6 @@ mpl.rcParams.update(mpl.rcParamsDefault)
 
 
 class Band:
-    """
-    This class contains all the methods for constructing band structures
-    from the outputs of VASP band structure calculations.
-
-    Parameters:
-        folder (str): This is the folder that contains the VASP files
-        projected (bool): Determines whether of not to parse the projected
-            eigenvalues from the PROCAR file. Making this true
-            increases the computational time, so only use if a projected
-            band structure is required.
-        spin (str): Choose which spin direction to parse. ('up' or 'down')
-        kpath (str): High symmetry k-point path of band structure calculation
-            Due to the nature of the KPOINTS file for unfolded calculations this
-            information is a required input for proper labeling of the figure
-            for unfolded calculations. This information is extracted from the KPOINTS
-            files for non-unfolded calculations. (G is automaticall converted to \\Gamma)
-        n (int): Number of points between each high symmetry point.
-            This is also only required for unfolded calculations. This number should be
-            known by the user, as it was used to generate the KPOINTS file.
-    """
-
 
     """
     该类包含用于从 VASP 能带结构计算结果中构建能带结构的所有方法。
@@ -74,7 +53,7 @@ class Band:
 
 
     def __init__(
-        self,
+        self, #示例对象
         folder,
         projected=False,
         unfold=False,
@@ -83,8 +62,6 @@ class Band:
         n=None,
         M=None,
         high_symm_points=None,
-        # bandgap=False,
-        # printbg=True,
         shift_efermi=0,
         interpolate=True,
         new_n=200,
@@ -93,61 +70,62 @@ class Band:
         stretch_factor=1.0,
         efermi_folder=None,
     ):
+
         """
-        Initialize parameters upon the generation of this class
+        在该类生成时初始化参数
 
         Parameters:
-            folder (str): This is the folder that contains the VASP files
-            projected (bool): Determines whether of not to parse the projected
-                eigenvalues from the PROCAR file. Making this true
-                increases the computational time, so only use if a projected
-                band structure is required.
-            unfold (bool): Determines if the band structure should be unfolded or not.
-            spin (str): Choose which spin direction to parse. ('up' or 'down')
-            kpath (str): High symmetry k-point path of band structure calculation
-                Due to the nature of the KPOINTS file for unfolded calculations this
-                information is a required input for proper labeling of the figure
-                for unfolded calculations. This information is extracted from the KPOINTS
-                files for non-unfolded calculations. (G is automatically converted to \\Gamma)
-            n (int): Number of points between each high symmetry point.
-                This is also only required for unfolded calculations. This number should be
-                known by the user, as it was used to generate the KPOINTS file.
-            M (list[list]): Transformation matrix for unfolding calculations. Can be found using
-                the conver_slab function in the utils module.
-            high_symm_points (list[list]): Coordinates of the high symmetry points of the bulk
-                Brillouin zone for an unfolded calculation.
-            shift_efermi (float): Gives the option to shift the fermi energy by the specified value
-            interpolate (bool): Determines is the data between each high symmetry point should be
-                interpolated or not.
-            new_n (int): New number of k-points in between each high symmetry point.
-            custom_kpath (list): Custom kpath that can be selected is the user desires.
-                Given a path G-X-W-L-G-K then there are 5 segments to choose from
-                [1 -> G-X, 2 -> X-W, 3 -> W-L, 4 -> L-G, 5 -> G-K]. If a user wanted to
-                plot only the path G-X-W they can set custom_kpath=[1,2]. If a user wanted
-                to flip the k-path of a segment, then the index should be made negative, so
-                if the desired path was G-X|L-W then custom_kpath=[1,-3]
-            soc_axis (str | None): This parameter can either take the value of None or
-                the value of 'x', 'y', or 'z'. If either 'x', 'y', or 'z' are given
-                then spin='up' states will be defined by positive values of this spin-component
-                and spin='down' states will be defined by negative values of this spin-component.
-                This will only be used for showing a pseudo-spin-polarized plot for calculations
-                that have SOC enabled.
-            stretch_factor (float): Used to scale the eigenvalues by a certain constant. Useful for comparing to ARPES data.
-                Default is scale_factor = 1.0 (i.e. no scaling)
-            efermi_folder (str | None): The folder containing the OUTCAR file that displays the E-fermi.
-                Default is None, meaning it is the same directory as the band calculation directory `folder`.
-                Ideally, it should be set to the working directory of an SCF calculation folder.
+            folder (str): VASP任务的文件路径
 
+            projected (bool): 决定是否从PROCAR文件中解析投影本征值。设置为True会增加计算时间,因此仅在需要投影能带结构时使用。
+
+            unfold (bool): 决定是否对能带结构进行展开。
+
+            spin (str): 选择解析哪个自旋方向。('up' 或 'down')
+
+            kpath (str): 能带结构计算中的高对称k点路径。由于展开计算中KPOINTS文件的特殊性,该信息是绘图时正确标注所必需的。对于非展开计算,该信息可从KPOINTS文件中提取。(G 会自动转换为 \\Gamma)
+            
+            n (int): 每两个高对称点之间的点数。仅在展开计算中需要。用户应已知该数值,因为它是在生成KPOINTS文件时使用的。
+            
+            M (list[list]): 用于展开计算的变换矩阵。可通过utils模块中的conver_slab函数获取。
+            
+            high_symm_points (list[list]): 用于展开计算的体布里渊区中高对称点的坐标。
+            
+            shift_efermi (float): 选项,可将费米能级按指定值进行平移。
+            
+            interpolate (bool): 决定是否对每两个高对称点之间的数据进行插值。
+            
+            new_n (int): 每两个高对称点之间的新k点数。
+            
+            custom_kpath (list): 自定义k路径,可按用户需求选择。例如路径G-X-W-L-G-K包含5个片段:[1 -> G-X, 2 -> X-W, 3 -> W-L, 4 -> L-G, 5 -> G-K]。如果用户只想绘制G-X-W路径,可设置custom_kpath=[1,2]。若想反转某段k路径,则应将该索引设为负值,例如目标路径为G-X|L-W,则custom_kpath=[1,-3]
+            
+            soc_axis (str | None): 此参数可以为None,或为'x'、'y'或'z'。若指定为'x'、'y'或'z'之一,则spin='up'态由该自旋分量的正值定义,
+            
+            spin='down'态由负值定义。仅用于SOC开启时显示伪自旋极化图。
+
+            stretch_factor (float): 用于按某一常数缩放本征值。适用于与ARPES数据进行对比。默认值为stretch_factor = 1.0(即不缩放)
+
+            efermi_folder (str | None): 包含显示E-fermi的OUTCAR文件的文件夹。默认值为None,表示与能带计算目录`folder`相同。理想情况下应设为SCF计算的工作目录。
         """
+
+
+
+
+
+
+
         self.interpolate = interpolate
         self.soc_axis = soc_axis
         self.new_n = new_n
         self.stretch_factor = stretch_factor
-        # self.bandgap = bandgap
-        # self.printbg = printbg
+
         self.eigenval = Eigenval(os.path.join(folder, "EIGENVAL"))
+        # 读取 EIGENVAL 文件，并使用 Eigenval 函数分析。
 
         outcar_path = os.path.join(efermi_folder or folder, "OUTCAR")
+        # OUTCAR 文件路径
+
+        # 尝试从 VASP 的 OUTCAR 文件中提取费米能级（E-fermi），并加上一个可选的能量偏移 shift_efermi，最终存储在 self.efermi 中。
         try:
             efermi_output = os.popen(f"grep E-fermi {outcar_path}").read().strip()
             if not efermi_output:
@@ -158,12 +136,17 @@ class Band:
         except (IndexError, ValueError) as e:
             raise ValueError(f"Error reading E-fermi value from {outcar_path}: {e}")
 
+        # 读取指定路径下的 POSCAR 文件，并用 Poscar 类解析成结构对象，保存为 self.poscar。
         self.poscar = Poscar.from_file(
             os.path.join(folder, "POSCAR"),
             check_for_POTCAR=False,
             read_velocities=False,
         )
+
+
+        # INCAR 文件路径
         self.incar = Incar.from_file(os.path.join(folder, "INCAR"))
+
         if "LSORBIT" in self.incar:
             if self.incar["LSORBIT"]:
                 self.lsorbit = True
@@ -191,9 +174,11 @@ class Band:
         self.kpoints_file = Kpoints.from_file(os.path.join(folder, "KPOINTS"))
 
         self.wavecar = os.path.join(folder, "WAVECAR")
+
         self.projected = projected
 
         self.forbitals = self._check_f_orb()
+
         self.unfold = unfold
 
         if self.hse and self.unfold:
@@ -206,6 +191,7 @@ class Band:
         self.folder = folder
         self.spin = spin
         self.spin_dict = {"up": Spin.up, "down": Spin.down}
+
         if not self.unfold:
             self.pre_loaded_bands = os.path.isfile(
                 os.path.join(folder, "eigenvalues.npy")
@@ -267,10 +253,6 @@ class Band:
             "d": 2,
             "f": 3,
         }
-        # if self.bandgap:
-        #     self.bg = self._get_bandgap()
-        # else:
-        #     self.bg = None
 
         self.custom_kpath = custom_kpath
         if self.custom_kpath is not None:
@@ -278,8 +260,6 @@ class Band:
                 self.custom_kpath_inds,
                 self.custom_kpath_flip,
             ) = self._get_custom_kpath()
-        #  else:
-        #  self.custom_kpath_inds, self.custom_kpath_flip = None, None
 
         if projected:
             self.pre_loaded_projections = os.path.isfile(
@@ -299,12 +279,7 @@ class Band:
 
         return inds, flip
 
-    # def _get_bandgap(self):
-    #     from vaspvis.utils import BandGap
-    #     self.bg = BandGap(
-    #         folder=self.folder,
-    #         printbg=self.printbg,
-    #     )
+
 
     def _check_f_orb(self):
         f_elements = [
