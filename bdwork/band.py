@@ -147,6 +147,8 @@ class Band:
         # INCAR 文件路径
         self.incar = Incar.from_file(os.path.join(folder, "INCAR"))
 
+        # 检查 INCAR 中的 LSORBIT 参数
+        # 等价简化写法：self.lsorbit = self.incar.get("LSORBIT", False) is True
         if "LSORBIT" in self.incar:
             if self.incar["LSORBIT"]:
                 self.lsorbit = True
@@ -155,6 +157,7 @@ class Band:
         else:
             self.lsorbit = False
 
+        # 检查 INCAR 中的 ISPIN 参数
         if "ISPIN" in self.incar:
             if self.incar["ISPIN"] == 2:
                 self.ispin = True
@@ -163,6 +166,7 @@ class Band:
         else:
             self.ispin = False
 
+        # 检查 INCAR 中的 LHFCALC 参数
         if "LHFCALC" in self.incar:
             if self.incar["LHFCALC"]:
                 self.hse = True
@@ -171,6 +175,7 @@ class Band:
         else:
             self.hse = False
 
+        #加载 VASP 的 KPOINTS 文件
         self.kpoints_file = Kpoints.from_file(os.path.join(folder, "KPOINTS"))
 
         self.wavecar = os.path.join(folder, "WAVECAR")
@@ -192,6 +197,7 @@ class Band:
         self.spin = spin
         self.spin_dict = {"up": Spin.up, "down": Spin.down}
 
+        # 处理普通能带计算和能带展开计算的两种情况
         if not self.unfold:
             self.pre_loaded_bands = os.path.isfile(
                 os.path.join(folder, "eigenvalues.npy")
@@ -208,9 +214,11 @@ class Band:
                 self.kpoints,
             ) = self._load_bands_unfold()
 
+        # 根据 stretch_factor 调整能量本征值 (eigenvalues)
         if self.stretch_factor != 1.0:
             self.eigenvalues *= self.stretch_factor
 
+        # 写入各种颜色列表
         self.color_dict = {
             0: "#FF0000",
             1: "#0000FF",
@@ -229,6 +237,8 @@ class Band:
             14: "#FF5C77",
             15: "#778392",
         }
+
+        # 分轨道列表
         self.orbital_labels = {
             0: "s",
             1: "p_{y}",
@@ -254,7 +264,9 @@ class Band:
             "f": 3,
         }
 
+        # 设置能带中 k 点路径
         self.custom_kpath = custom_kpath
+        
         if self.custom_kpath is not None:
             (
                 self.custom_kpath_inds,
