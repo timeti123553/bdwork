@@ -166,7 +166,7 @@ class Band:
         else:
             self.ispin = False
 
-        # 检查 INCAR 中的 LHFCALC 参数
+        # 检查 INCAR 中的 LHFCALC 参数（LHFCALC 决定是否开启杂化泛函 HSE 计算）
         if "LHFCALC" in self.incar:
             if self.incar["LHFCALC"]:
                 self.hse = True
@@ -175,9 +175,10 @@ class Band:
         else:
             self.hse = False
 
-        #加载 VASP 的 KPOINTS 文件
+        # 加载 VASP 的 KPOINTS 文件
         self.kpoints_file = Kpoints.from_file(os.path.join(folder, "KPOINTS"))
 
+        # 加载波函数文件 WAVECAR
         self.wavecar = os.path.join(folder, "WAVECAR")
 
         self.projected = projected
@@ -198,6 +199,9 @@ class Band:
         self.spin_dict = {"up": Spin.up, "down": Spin.down}
 
         # 处理普通能带计算和能带展开计算的两种情况
+        '''
+        eigenvalues.npy 和 unfolded_eigenvalues.npy 两个文件是预加载文件，可以加快运行的速度。
+        '''
         if not self.unfold:
             self.pre_loaded_bands = os.path.isfile(
                 os.path.join(folder, "eigenvalues.npy")
@@ -285,6 +289,9 @@ class Band:
             )
             self.spin_projections = self._load_soc_spin_projection()
 
+
+
+
     def _get_custom_kpath(self):
         flip = (-np.sign(self.custom_kpath) + 1).astype(bool)
         inds = (np.abs(self.custom_kpath) - 1).astype(int)
@@ -292,7 +299,7 @@ class Band:
         return inds, flip
 
 
-
+    # 检查是否含有 La 系稀土元素（是否含有 f 轨道）
     def _check_f_orb(self):
         f_elements = [
             "La",
@@ -325,15 +332,15 @@ class Band:
 
         return f
 
-    def _load_bands(self):
-        """
-        This function is used to load eigenvalues from the vasprun.xml
-        file and into a dictionary which is in the form of
-        band index --> eigenvalues
 
-        Returns:
-            bands_dict (dict[str][np.ndarray]): Dictionary which contains
-                the eigenvalues for each band
+    def _load_bands(self):
+
+        """
+        该函数用于从 vasprun.xml 文件中加载本征值，并将其存储到一个字典中，
+        该字典的结构为：带索引 --> 本征值
+
+        返回值：
+            bands_dict (dict[str][np.ndarray]): 包含每个能带对应本征值的字典
         """
 
         if self.spin == "up":
@@ -353,32 +360,38 @@ class Band:
                 kpoints = band_data[0, :, 2:]
         else:
             if len(self.eigenval.eigenvalues.keys()) > 1:
+                # 处理有自旋极化的情况
                 eigenvalues_up = np.transpose(
                     self.eigenval.eigenvalues[Spin.up], axes=(1, 0, 2)
                 )
                 eigenvalues_down = np.transpose(
                     self.eigenval.eigenvalues[Spin.down], axes=(1, 0, 2)
                 )
+                # 费米能级校正
                 eigenvalues_up[:, :, 0] = eigenvalues_up[:, :, 0] - self.efermi
                 eigenvalues_down[:, :, 0] = eigenvalues_down[:, :, 0] - self.efermi
+                # 拼接自旋上下的能带数据
                 eigenvalues = np.concatenate([eigenvalues_up, eigenvalues_down], axis=2)
             else:
+                # 无自旋极化
                 eigenvalues = np.transpose(
                     self.eigenval.eigenvalues[Spin.up], axes=(1, 0, 2)
                 )
                 eigenvalues[:, :, 0] = eigenvalues[:, :, 0] - self.efermi
 
+            # 处理 k 点的信息
             kpoints = np.array(self.eigenval.kpoints)
-
+            # 只保留权重为0的 k 点，这通常是 HSE 计算中用于计算能带结构的数据点。
             if self.hse:
                 kpoint_weights = np.array(self.eigenval.kpoints_weights)
                 zero_weight = np.where(kpoint_weights == 0)[0]
                 eigenvalues = eigenvalues[:, zero_weight]
                 kpoints = kpoints[zero_weight]
 
+            # 数据保存为缓存文件
             band_data = np.append(
                 eigenvalues,
-                np.tile(kpoints, (eigenvalues.shape[0], 1, 1)),
+                np.tile(kpoints, (eigenvalues.shape[0], 1, 1)), # 难点
                 axis=2,
             )
 
@@ -395,6 +408,17 @@ class Band:
         return eigenvalues, kpoints
 
     def _load_bands_unfold(self):
+        '''
+        这段代码实现了一个私有方法 _load_bands_unfold()，用于加载能带展开 (Band Unfolding) 的数据。Band Unfolding 是在电子结构计算中，将复杂材料的能带结构映射到一个简单的、类似于理想晶体的布里渊区，以便更清晰地展示电子态的起源。这个方法特别用于处理含有杂质、缺陷、异质结或超晶胞结构的系统。
+        '''
+
+        '''
+        自旋 "up" (spin = 0)
+
+        自旋 "down" (spin = 1,如果没有自旋轨道耦合 lsorbit=False)
+
+        自旋轨道耦合 (SOC) 情况下只需要考虑 spin = 0,因为自旋态混合。
+        '''
         if self.spin == "up":
             spin = 0
         if self.spin == "down":
@@ -403,14 +427,17 @@ class Band:
             else:
                 spin = 1
 
+        # k路径 (k-path) 生成
         kpath = make_kpath(self.high_symm_points, nseg=self.n)
 
+        # 预加载的能带数据
         if self.pre_loaded_bands:
             with open(
                 os.path.join(self.folder, "unfolded_eigenvalues.npy"), "rb"
             ) as eigenvals:
                 band_data = np.load(eigenvals)
         else:
+            # 从 WAVECAR 展开能带
             wavecar_data = unfold(
                 M=self.M,
                 wavecar=self.wavecar,
@@ -422,11 +449,15 @@ class Band:
                 band_data,
             )
 
+        # 数据重排和自旋选择
         band_data = np.transpose(band_data[spin], axes=(2, 1, 0))
         eigenvalues, spectral_weights, K_indices = band_data
-        eigenvalues = eigenvalues - self.efermi
-        kpath = np.array(kpath)
 
+        # 费米能级校正
+        eigenvalues = eigenvalues - self.efermi
+
+        # k 路径点的处理
+        kpath = np.array(kpath)
         path_len = len(self.kpath)
         n = self.n
         inserts = [n * (i + 1) for i in range(path_len - 1)]
@@ -434,6 +465,7 @@ class Band:
         for i in reversed(inserts):
             inds.insert(i, i)
 
+        # 应用重排到实际数据
         kpath = kpath[inds]
         spectral_weights = spectral_weights[:, inds]
         K_indices = K_indices[:, inds]
@@ -443,13 +475,15 @@ class Band:
 
     def _load_projected_bands(self):
         """
-        This function loads the project weights of the orbitals in each band
-        from vasprun.xml into a dictionary of the form:
-        band index --> atom index --> weights of orbitals
+        该函数从 vasprun.xml 文件中加载每个能带中轨道的投影权重，
+        并将其存储在一个字典中，字典的结构为：
+        带索引 --> 原子索引 --> 轨道的投影权重
 
-        Returns:
-            projected_dict (dict([str][int][pd.DataFrame])): Dictionary containing the projected weights of all orbitals on each atom for each band.
+        返回值：
+            projected_dict (dict[str][int][pd.DataFrame]): 
+                包含每个能带中，每个原子上所有轨道投影权重的字典。
         """
+
 
         if self.lsorbit:
             if self.soc_axis is None:
